@@ -1,100 +1,101 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cGyro;
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 /**
- * Created by cicada01 on 01/21/17.
+ * Created by cicada01 on 2/24/17.
  */
-@Autonomous(name = "AllianceAutomatonsBlue", group = "Cayles")
-public class AllianceAutomatonsBlue extends LinearOpMode {
 
-    //motor
+public class blueTest extends LinearOpMode{
     DcMotor frontRight;
     DcMotor frontLeft;
     DcMotor backRight;
     DcMotor backLeft;
-    private DcMotor uptake;
-    private DcMotor intake;
-    private DcMotor shooter;
+    DcMotor uptake;
+    DcMotor intake;
+    DcMotor shooter;
 
     //servo
-    private Servo rightButtonServo;
-    private Servo leftButtonServo;
-    private Servo loadFront;
+    Servo rightButtonServo;
+    Servo leftButtonServo;
+    Servo loadFront;
+    double out;
 
     //gyro
     ModernRoboticsI2cGyro gyro;
 
     //color sensor
-    ColorSensor lineColor;
     ColorSensor beaconColor;
+
+    //distance sensor
+    OpticalDistanceSensor dSensor;
+    double dSensorValue;
+    double maxValue;
 
     //touch sensors
     TouchSensor leftSwitch;
     TouchSensor rightSwitch;
 
     //encoders
-    static final double     COUNTS_PER_MOTOR_REV    = 1680;
+    static final double     COUNTS_PER_MOTOR_REV    = 1120;
     static final double     DRIVE_GEAR_REDUCTION    = 1.0;     // This is < 1.0 if geared UP
     static final double     WHEEL_DIAMETER_INCHES   = 3.94;     // For figuring circumference
     static final double     COUNTS_PER_INCH         = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
             (WHEEL_DIAMETER_INCHES * 3.1415);
     static final double     DRIVE_SPEED             = 0.6;
     static final double     TURN_SPEED              = 0.5;
-    private ElapsedTime runtime                     = new ElapsedTime();
+    ElapsedTime runtime                     = new ElapsedTime();
 
     //shooter
-    private double shooterSpeed;
-    private double shooterPosition;
-    private int    currentShootPosition;
-    private int    previousShootPosition;
+    double shooterSpeed;
+    double shooterPosition;
+    int    currentShootPosition;
+    int    previousShootPosition;
 
     //reload
-    private double  loadFrontPosUp;
-    private double  loadFrontPosDown;
-    private double  loadFrontTime;
-    private boolean loadIsReady;
+    double  loadFrontPosUp;
+    double  loadFrontPosDown;
+    double  loadFrontTime;
+    boolean loadIsReady;
 
     //beacon
-    private double  lBeaconPositionIn;
-    private double  lBeaconPositionOut;
-    private double  rBeaconPositionIn;
-    private double  rBeaconPositionOut;
+    double  lBeaconPositionIn;
+    double  lBeaconPositionOut;
+    double  rBeaconPositionIn;
+    double  rBeaconPositionOut;
+    boolean rightButtonServoOut;
 
     //touch sensor
-    private boolean leftButton;
-    private boolean rightButton;
+    boolean leftButton;
+    boolean rightButton;
 
     //color sensor
-    private double colorOffset;
-    private double blue;
+    double colorOffset;
+    double red;
 
     //gyro rotate
-    private boolean curResetState;
-    private boolean lastResetState;
-    private int     headingEncoder;
-    private int     headingOffset;
-    private double  turnPower;
+    boolean curResetState;
+    boolean lastResetState;
+    int     headingEncoder;
+    int     headingOffset;
+    double  turnPower;
 
-    private double currentTime;
-    private double strafeTime;
-    private double strafeSpeed;
-    private boolean quickFix;
+    double currentTime;
+    double strafeTime;
+    double strafeSpeed;
+    boolean quickFix;
 
     int    value = 1;
 
     public void roboInit(){
 
-
-        //MOTOR INIT
         frontRight  = hardwareMap.dcMotor.get("FRONT_RIGHT");
         frontLeft   = hardwareMap.dcMotor.get("FRONT_LEFT");
         backRight   = hardwareMap.dcMotor.get("BACK_RIGHT");
@@ -102,6 +103,9 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
         intake      = hardwareMap.dcMotor.get("INTAKE");
         uptake      = hardwareMap.dcMotor.get("UPTAKE");
         shooter     = hardwareMap.dcMotor.get("SHOOTER");
+
+        //dsensor
+        dSensor = hardwareMap.opticalDistanceSensor.get("sensor_ods");
 
         //SERVO INIT
         rightButtonServo    = hardwareMap.servo.get("RIGHT_BUTTON");
@@ -115,12 +119,10 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
         gyro = (ModernRoboticsI2cGyro)hardwareMap.gyroSensor.get("GYRO");
 
         //COLOR SENSOR
-        lineColor   = hardwareMap.colorSensor.get("LINE_COLOR");
         beaconColor = hardwareMap.colorSensor.get("BEACON_COLOR");
         beaconColor.enableLed(false);
-        lineColor.enableLed(false);
         colorOffset = 0;
-        blue     = 2.0;
+        red       = 2.0;
 
         //TOUCH SENSOR
         leftSwitch  = hardwareMap.touchSensor.get("LEFT_TOUCH");
@@ -133,6 +135,7 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
         rBeaconPositionOut   = 0.3;
         rightButtonServo.setPosition(rBeaconPositionIn);
         leftButtonServo.setPosition(lBeaconPositionIn);
+        rightButtonServoOut = false;
 
         //SHOOTER
         shooterSpeed            = 1.0;
@@ -150,6 +153,8 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
         leftButton  = false;
         rightButton = false;
 
+        maxValue = 0.01;
+
         //GYRO ROTATE
         curResetState   = false;
         lastResetState  = false;
@@ -165,14 +170,12 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
         value       = 1;
 
     }
-
-    public void runOpMode()  {
+    public void runOpMode(){
 
         roboInit();
 
         gyroInit();
 
-        lineColor.enableLed(false);
         beaconColor.enableLed(false);
 
         waitForStart();
@@ -181,9 +184,12 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
         while(opModeIsActive()) {
 
             beaconSwitchCase();
+            //switchTest();
+            //strafe(0.25, "right");
             debug();
 
             idle();
+
 
         }
 
@@ -207,168 +213,44 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
 
     }
 
-    private void beaconSwitchCase(){
+    public void switchTest(){
 
 
-        switch(value){
+        switch (value){
 
-                case 1: encoderDrive(DRIVE_SPEED,  17,  -17, 1.5, headingEncoder);
-                    break;
-                case 2: shoot();
-                    break;
-                case 3: reload();delay(0.5);
-                    break;
-                case 4: shoot();
-                    break;
-                case 5: encoderDrive(DRIVE_SPEED,  20.00,  -20.00, 1.5, headingEncoder);
-                    break;
-                case 6: gyroRotate(0.5, 67);
-                    break;
-                case 7: moveToWall(0.5);
-                    break;
-                case 8: currentTime = getRuntime();while(getRuntime()-currentTime < 2.0 && opModeIsActive()){robotDrive(-0.5, 0.5);}robotStop();value++;
-                    break;
-                case 9: gyroRotate(0.5, 120);
-                    break;
-                case 10: currentTime = getRuntime();while(getRuntime()-currentTime < 3.5 && opModeIsActive()){robotDrive(0.5, -0.5);}robotStop();value++;
-                    break;                default:frontLeft.setPower(0.0);frontRight.setPower(0.0);backLeft.setPower(0.0);backRight.setPower(0.0);
-                    break;
-
-            }
-
-        }
-
-
-    private void robotStop(){
-
-        frontRight.setPower(0.0);
-        backRight.setPower(0.0);
-        frontLeft.setPower(0.0);
-        backLeft.setPower(0.0);
-
-
-    }
-
-    private void robotDrive(double left, double right){
-
-        frontRight.setPower(right);
-        backRight.setPower(right);
-        frontLeft.setPower(left);
-        backLeft.setPower(left);
-
-    }
-
-    private void strafe(double speed, String direction){
-
-        if(direction == "right"){
-
-            frontRight.setPower(speed);
-            backRight.setPower(-speed);
-            frontLeft.setPower(speed);
-            backLeft.setPower(-speed);
-
-        }
-
-        else if(direction == "left"){
-
-            frontRight.setPower(-speed);
-            backRight.setPower(speed);
-            frontLeft.setPower(-speed);
-            backLeft.setPower(speed);
-
-        }
-
-        else{
-
-            robotStop();
+            case 1: distanceSensor(0.5, currentTime);
+                break;
+            case 2: checkColor(0.5, currentTime);
+                break;
+            case 3: keepItOnWall(0.5, 0.3);
+                break;
+            case 4: robotDrive(0.3,-0.3);sleep(333);servoIn();
+                break;
+            case 5: currentTime = getRuntime();while(getRuntime() - currentTime < 2.0 && opModeIsActive())strafe(0.5, "right");value++;
+                break;
+            case 6: distanceSensor(0.5, currentTime);
+                break;
+            case 7: checkColor(0.5, currentTime);
+                break;
+            case 8: keepItOnWall(0.5, 0.3);
+                break;
+            case 9: robotDrive(0.3,-0.3);sleep(333);servoIn();
+                break;
+            default: frontLeft.setPower(0.0);frontRight.setPower(0.0);backLeft.setPower(0.0);backRight.setPower(0.0);
+                break;
 
         }
 
     }
 
-    private void strafeToLine(double speed, double time){
+    public void beaconSwitchCase(){
 
-        if(!quickFix){currentTime = getRuntime();}
 
-        while(beaconColor.blue() < blue + colorOffset && opModeIsActive()){//getRuntime() - currentTime < strafeTime && !quickFix){
 
-            strafe(speed, "left");
-            debug();
-
-        }
-
-        quickFix = true;
-
-        while(beaconColor.blue() < blue + colorOffset && opModeIsActive()){
-
-            //move right
-            strafe(speed, "left");
-
-        }
-        moveToWall(0.5);
-
-        //stop and press button
-        frontRight.setPower(0.0);
-        backRight.setPower(0.0);
-        frontLeft.setPower(0.0);
-        backLeft.setPower(0.0);
-
-        pressBeaconButton(0.5);
-
-        quickFix = false;
 
     }
 
-    private void shoot(){
-
-        while(shooter.getCurrentPosition() - previousShootPosition < shooterPosition && opModeIsActive()){
-
-            shooter.setPower(shooterSpeed);
-            telemetry.addData("encoder_data", shooter.getCurrentPosition());
-            telemetry.update();
-
-        }
-
-        previousShootPosition = shooter.getCurrentPosition();
-
-        shooter.setPower(0.0);
-        value++;
-    }
-
-    private void reload(){
-
-        currentTime = getRuntime();
-
-        while(getRuntime() - currentTime < loadFrontTime){
-
-            loadFront.setPosition(loadFrontPosUp);
-            intake.setPower(1.0);
-
-        }
-
-        loadFront.setPosition(loadFrontPosDown);
-        intake.setPower(0.0);
-        value++;
-
-    }
-
-    private void pressBeaconButton(double time) {
-
-        currentTime = getRuntime();
-
-        while(getRuntime() - currentTime < time && opModeIsActive()){
-
-            rightButtonServo.setPosition(rBeaconPositionOut);
-            keepItOnWall(0.3);
-
-        }
-
-        rightButtonServo.setPosition(rBeaconPositionIn);
-        value++;
-
-    }
-
-    private void encoderDrive(double speed, double leftInches, double rightInches, double timeoutS, int heading) {
+    public void encoderDrive(double speed, double leftInches, double rightInches, double timeoutS, int heading) {
         int newLeftTarget;
         int newRightTarget;
 
@@ -422,7 +304,188 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
         }
     }
 
-    private void gyroRotate(double speed, int heading) {
+    public void robotStop(){
+
+        frontRight.setPower(0.0);
+        backRight.setPower(0.0);
+        frontLeft.setPower(0.0);
+        backLeft.setPower(0.0);
+
+
+    }
+
+    public void robotDrive(double left, double right){
+
+        frontRight.setPower(right);
+        backRight.setPower(right);
+        frontLeft.setPower(left);
+        backLeft.setPower(left);
+
+    }
+
+    public void strafe(double speed, String direction){
+
+        if(direction == "right"){
+
+            double leftPower;
+            double rightPower;
+
+            if(!leftSwitch.isPressed()){
+
+                leftPower = -speed + (speed * 0.75);
+
+            }
+
+            else{leftPower = -speed;}
+
+            if(!rightSwitch.isPressed()){
+
+                rightPower = speed - (speed * 0.75);
+
+            }
+
+            else{rightPower = speed;}
+
+            frontRight.setPower(rightPower);
+            backRight.setPower(-speed);
+            frontLeft.setPower(speed);
+            backLeft.setPower(leftPower);
+
+        }
+
+        else if(direction == "left"){
+
+            double leftPower;
+            double rightPower;
+
+            if(!leftSwitch.isPressed()){
+
+                leftPower = -speed + (speed * 0.3);
+
+            }
+
+            else{leftPower = -speed;}
+
+            if(!rightSwitch.isPressed()){
+
+                rightPower = speed - (speed * 0.75);
+
+            }
+
+            else{rightPower = speed;}
+
+            frontRight.setPower(-speed);
+            backRight.setPower(rightPower);
+            frontLeft.setPower(leftPower);
+            backLeft.setPower(speed);
+
+        }
+
+        else{
+
+            robotStop();
+
+        }
+
+    }
+
+    public void checkColor(double speed, double time){
+
+
+        while(beaconColor.red() < red + colorOffset && opModeIsActive()){//getRuntime() - currentTime < strafeTime && !quickFix){
+
+            strafe(speed, "left");
+            debug();
+
+        }
+
+        sleep(10);
+
+        //stop and press button
+        frontRight.setPower(0.0);
+        backRight.setPower(0.0);
+        frontLeft.setPower(0.0);
+        backLeft.setPower(0.0);
+
+        pressBeaconButton(0.5);
+
+    }
+
+    public void shoot(){
+
+        while(shooter.getCurrentPosition() - previousShootPosition < shooterPosition && opModeIsActive()){
+
+            shooter.setPower(shooterSpeed);
+            telemetry.addData("encoder_data", shooter.getCurrentPosition());
+            telemetry.update();
+
+        }
+
+        previousShootPosition = shooter.getCurrentPosition();
+
+        shooter.setPower(0.0);
+        value++;
+    }
+
+    public void reload(){
+
+        currentTime = getRuntime();
+
+        while(getRuntime() - currentTime < loadFrontTime){
+
+            loadFront.setPosition(loadFrontPosUp);
+            intake.setPower(1.0);
+
+        }
+
+        loadFront.setPosition(loadFrontPosDown);
+        intake.setPower(0.0);
+        value++;
+
+    }
+
+    public void pressBeaconButton(double time) {
+
+        if(!rightButtonServoOut){
+
+            rightButtonServo.setPosition(rBeaconPositionOut);
+            rightButtonServoOut = true;
+
+        }
+
+        currentTime = getRuntime();
+
+        value++;
+
+    }
+
+    public void servoIn(){
+
+        if(rightButtonServoOut){
+
+            rightButtonServo.setPosition(rBeaconPositionIn);
+            rightButtonServoOut = false;
+        }
+
+        value++;
+    }
+
+    public void distanceSensor(double speed, double time){
+
+        while(dSensor.getRawLightDetected() < maxValue && opModeIsActive()){
+
+            strafe(speed, "right");
+
+        }
+
+
+        robotStop();
+
+        value++;
+
+    }
+
+    public void gyroRotate(double speed, int heading) {
 
         while(gyro.getHeading() < heading - headingOffset || gyro.getHeading() > heading + headingOffset && opModeIsActive()){
 
@@ -443,7 +506,7 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
 
     }
 
-    private void moveToWall(double speed){
+    public void moveToWall(double speed){
 
         leftButton  = leftSwitch.isPressed();
         rightButton = rightSwitch.isPressed();
@@ -467,7 +530,9 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
         if(rightButton && leftButton){value++;}
 
 
-    }private void keepItOnWall(double speed){
+    }
+
+    public void keepItOnWall(double speed, double time){
 
         leftButton  = leftSwitch.isPressed();
         rightButton = rightSwitch.isPressed();
@@ -488,19 +553,11 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
             frontRight.setPower(0.0);
             backRight.setPower(0.0);
         }
-
-
-    }
-
-    private double stabalizeRobo(int heading) {
-
-        double gyroOffset = (gyro.getIntegratedZValue()-heading)*turnPower;
-
-        return gyroOffset;
+        if(rightButton && leftButton || getRuntime() - currentTime > time){value++;}
 
     }
 
-    private void delay(double time){
+    public void delay(double time){
 
         currentTime = getRuntime();
 
@@ -519,7 +576,6 @@ public class AllianceAutomatonsBlue extends LinearOpMode {
         telemetry.addData("HEADING", gyro.getHeading());
         telemetry.addData("INT_Z", gyro.getIntegratedZValue());
 
-        telemetry.addData("CHECK_LINE_COLOR", lineColor.red());
         telemetry.addData("CHECK_RED_COLOR", beaconColor.red());
         telemetry.addData("CHECK_BLUE_COLOR", beaconColor.blue());
 

@@ -8,7 +8,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 /**
  * Created by owner on 11/3/2016.
  */
-@Disabled
 @TeleOp(name = "WheelCheckTest", group = "TeleOp")
 public class WheelCheckTest extends OpMode {
 

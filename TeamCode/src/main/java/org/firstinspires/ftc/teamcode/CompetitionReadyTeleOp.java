@@ -79,7 +79,14 @@ public class CompetitionReadyTeleOp extends LinearOpMode {
     boolean rightBeaconPrevious;
     boolean leftBeaconCurrent;
     boolean leftBeaconPrevious;
-    
+
+    //capball
+    DcMotor capBall;
+    Servo capBallServo;
+    double capBallIn;
+    double CapBallOut;
+    boolean capBallGo;
+    boolean capBallServoGo;
 
     public void runOpMode(){
 
@@ -165,6 +172,13 @@ public class CompetitionReadyTeleOp extends LinearOpMode {
         expoCurve = 1.0;
         roundTime = 120.0;
         currentRoundTime = 0.0;
+
+        capBall        = hardwareMap.dcMotor.get("CAP_BALL");
+        capBallServo   = hardwareMap.servo.get("CAP_BALL");
+        capBallIn      = 0.2;
+        CapBallOut     = 0.7;
+        capBallGo      = false;
+        capBallServoGo = false;
 
     }
 
@@ -321,6 +335,25 @@ public class CompetitionReadyTeleOp extends LinearOpMode {
 
     }
 
+    public void scissorLift(){
+
+        currentTime    = currentRoundTime;
+        capBallGo      = gamepad1.dpad_up;
+        capBallServoGo = gamepad1.dpad_left;
+
+        while(getRuntime() - currentTime <= 30.0 && opModeIsActive()){
+
+            if(capBallServoGo){
+
+                capBall.setPower(1.0);
+                capBallServo.setPosition(capBallIn);
+
+            }
+
+        }
+
+
+    }
 
     double expo(double x, double a){
 
